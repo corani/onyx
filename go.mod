@@ -1,6 +1,6 @@
 module github.com/corani/onyx
 
-go 1.24.3
+go 1.25.3
 
 require (
 	github.com/alecthomas/kong v1.12.1
