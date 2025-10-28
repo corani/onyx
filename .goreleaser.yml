@@ -1,0 +1,7 @@
+---
+builds:
+  - id: onyx
+    main: ./cmd/onyx
+    binary: onyx
+    env:
+      - CGO_ENABLED=0
