@@ -1,5 +1,6 @@
 # Onyx
 
+
 Onyx is a simple, friendly command-line tool for managing your daily notes in an
 [Obsidian](https://obsidian.md/) vault. It helps you quickly add and review notes for any day,
 right from your terminal.
@@ -11,6 +12,30 @@ right from your terminal.
 - **Fast, local, and private** — your notes stay on your machine
 - **Works with your existing Obsidian vault**
 - **User-friendly TUI** for smooth, interactive input
+
+## 🏗️ Installation
+
+You can install Onyx in two ways:
+
+### 1. Download a pre-built binary
+
+- Go to the [GitHub Releases page](https://github.com/corani/onyx/releases)
+- Download the latest release for your OS (e.g., `onyx-linux-amd64`, `onyx-darwin-amd64`, etc.)
+- Make it executable:
+   ```bash
+   chmod +x ./onyx-<your-platform>
+   mv ./onyx-<your-platform> ~/bin/onyx  # or anywhere in your $PATH
+   ```
+
+### 2. Install via Go
+
+If you have Go installed (1.21+ recommended):
+
+```bash
+go install github.com/corani/onyx/cmd/onyx@latest
+```
+
+This will place the `onyx` binary in your `$GOPATH/bin` or `$HOME/go/bin` directory.
 
 ## 🚀 Quick Start
 
