@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -45,7 +46,7 @@ func Load() (*Config, error) {
 	var config Config
 
 	if err := env.Parse(&config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse env: %w", err)
 	}
 
 	return &config, nil

@@ -2,9 +2,17 @@ package input
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
+)
+
+var (
+	// ErrInputCanceled is returned when the user cancels the input.
+	ErrInputCanceled = errors.New("input canceled")
+	// ErrUnexpectedModelType is returned when the model type is not what was expected.
+	ErrUnexpectedModelType = errors.New("unexpected model type")
 )
 
 type noteInputModel struct {
@@ -17,10 +25,11 @@ func (m noteInputModel) Init() tea.Cmd {
 	return textarea.Blink
 }
 
+//nolint:ireturn
 func (m noteInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
+	// Only one type in switch, so use if statement
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
 		case "ctrl+s":
 			m.done = true
 
@@ -44,24 +53,34 @@ func (m noteInputModel) View() string {
 }
 
 func PromptForText(prompt string) (string, error) {
-	ta := textarea.New()
-	ta.Placeholder = prompt + " (Ctrl+S to save, Esc to cancel)"
-	ta.Focus()
-	ta.CharLimit = 0
-	ta.SetWidth(80)
-	ta.SetHeight(10)
+	const (
+		defaultWidth  = 80
+		defaultHeight = 10
+	)
 
-	m := noteInputModel{textarea: ta}
-	p := tea.NewProgram(m)
+	textareaModel := textarea.New()
+	textareaModel.Placeholder = prompt + " (Ctrl+S to save, Esc to cancel)"
+	textareaModel.Focus()
+	textareaModel.CharLimit = 0
+	textareaModel.SetWidth(defaultWidth)
+	textareaModel.SetHeight(defaultHeight)
 
-	result, err := p.Run()
+	m := noteInputModel{textarea: textareaModel, done: false, canceled: false}
+	program := tea.NewProgram(m)
+
+	result, err := program.Run()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("input prompt failed: %w", err)
 	}
 
-	fm := result.(noteInputModel)
+	//nolint:varnamelen
+	fm, ok := result.(noteInputModel)
+	if !ok {
+		return "", fmt.Errorf("%w: %T", ErrUnexpectedModelType, result)
+	}
+
 	if fm.canceled {
-		return "", errors.New("input canceled")
+		return "", ErrInputCanceled
 	}
 
 	return fm.textarea.Value(), nil

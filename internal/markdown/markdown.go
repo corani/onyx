@@ -1,26 +1,31 @@
 package markdown
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/charmbracelet/glamour"
 )
 
-func Render(w io.Writer, md string) error {
+const defaultWordWrap = 80
+
+func Render(writer io.Writer, markdown string) error {
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(80),
+		glamour.WithWordWrap(defaultWordWrap),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("create renderer: %w", err)
 	}
 
-	out, err := renderer.Render(md)
+	rendered, err := renderer.Render(markdown)
 	if err != nil {
-		return err
+		return fmt.Errorf("render markdown: %w", err)
 	}
 
-	_, err = w.Write([]byte(out))
+	if _, err := writer.Write([]byte(rendered)); err != nil {
+		return fmt.Errorf("write output: %w", err)
+	}
 
-	return err
+	return nil
 }
