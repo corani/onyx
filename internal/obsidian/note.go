@@ -24,7 +24,7 @@ func (n *Note) List() (string, error) {
 
 	lines := strings.Split(string(data), "\n")
 
-	start, end := findNotesSection(lines)
+	start, end := findSection(lines, "## Notes")
 	if start == 0 {
 		return "", nil
 	}
@@ -46,7 +46,7 @@ func (n *Note) Create(text string) error {
 
 	lines := strings.Split(string(data), "\n")
 
-	start, end := findNotesSection(lines)
+	start, end := findSection(lines, "## Notes")
 	if start == 0 {
 		return fmt.Errorf("%w", ErrNotesSectionNotFound)
 	}
@@ -62,25 +62,4 @@ func (n *Note) Create(text string) error {
 	}
 
 	return nil
-}
-
-// findNotesSection returns the start and end indices of the notes section in the lines slice.
-func findNotesSection(lines []string) (int, int) {
-	var start, end int
-
-	for i, line := range lines {
-		if strings.HasPrefix(line, "## Notes") {
-			start = i
-		} else if start > 0 && strings.HasPrefix(line, "## ") {
-			end = i
-
-			break
-		}
-	}
-
-	if end == 0 {
-		end = len(lines)
-	}
-
-	return start, end
 }

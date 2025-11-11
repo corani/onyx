@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"strings"
 )
 
 type Vault struct {
@@ -36,4 +37,25 @@ func (v *Vault) GetDailyNote(date string) (*Note, error) {
 		Path:  notePath,
 		Date:  date,
 	}, nil
+}
+
+// findSection returns the start and end indices of the section whose header matches exactly header.
+func findSection(lines []string, header string) (int, int) {
+	var start, end int
+
+	for idx, line := range lines {
+		if strings.HasPrefix(line, header) {
+			start = idx
+		} else if start > 0 && strings.HasPrefix(line, "## ") && line != header {
+			end = idx
+
+			break
+		}
+	}
+
+	if start > 0 && end == 0 {
+		end = len(lines)
+	}
+
+	return start, end
 }
