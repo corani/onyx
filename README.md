@@ -9,6 +9,7 @@ right from your terminal.
 
 - **Add notes** to your daily Obsidian journal with a single command
 - **List notes** for any date, beautifully rendered in your terminal
+- **Manage a day planner**: add time-blocked entries and check/uncheck them
 - **Fast, local, and private** — your notes stay on your machine
 - **Works with your existing Obsidian vault**
 - **User-friendly TUI** for smooth, interactive input
@@ -79,6 +80,65 @@ Onyx expects your Obsidian vault to have the following structure:
 - Onyx stores your notes as markdown files in your Obsidian vault, under `Journal/Daily/YYYY-MM-DD.md`.
 - Each note is added to the `## Notes` section of the daily file.
 - You can add notes interactively or directly from the command line.
+- Day planner entries live under a `## Day Planner` section in the same daily file.
+
+## 🗓 Day Planner
+
+Onyx lets you manage scheduled items in a dedicated `## Day Planner` section of your daily note.
+
+### Requirements
+
+Your daily note must already contain:
+
+```markdown
+## Day Planner
+```
+
+Onyx will not create this section; if it is missing, planner commands return an error.
+
+Entries are stored as checkbox list items with a start time and optional end time:
+
+```markdown
+- [ ] 09:30 Start work
+- [ ] 16:45-17:00 Daily Scrum
+```
+
+### Adding Entries
+
+Use a start time (24h `HH:MM`), optional end time, and description. Omitting arguments triggers interactive single-line prompts.
+
+```bash
+./onyx plan add 09:30 "Start work"
+./onyx plan add 16:45-17:00 "Daily Scrum"
+./onyx plan add 09:30          # interactive description prompt
+./onyx plan add                # interactive time + description prompts
+```
+
+Entries are inserted in chronological order by start time. Overlapping times are allowed; a warning is logged.
+
+### Listing Planner
+
+```bash
+./onyx plan list          # today
+./onyx plan list -d 2025-11-11
+```
+
+### Marking Done / Undone
+
+Provide the exact time token (start or range):
+
+```bash
+./onyx plan check 09:30
+./onyx plan check 16:45-17:00
+./onyx plan uncheck 09:30
+```
+
+### Notes
+
+- Time format must be 24h `HH:MM`; end time (if supplied) must be after start.
+- Interactive prompts: Enter submits, Esc cancels that field (blank end time allowed).
+- Planner section missing → error (no implicit creation).
+- A future enhancement may include updating or removing entries.
 
 ## 💡 Tips
 
