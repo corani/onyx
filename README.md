@@ -124,15 +124,21 @@ Entries are inserted in chronological order by start time. Overlapping times are
 ./onyx plan list -d 2025-11-11
 ```
 
+
 ### Marking Planner Done / Undone
 
-Provide the exact time token (start or range):
+Provide a case-insensitive substring of the planner entry text (must match exactly one entry):
 
 ```bash
-./onyx plan check 09:30
-./onyx plan check 16:45-17:00
-./onyx plan uncheck 09:30
+./onyx plan check "Start work"
+./onyx plan check "Daily Scrum"
+./onyx plan uncheck "Start work"
 ```
+
+Errors:
+- Missing section → error (not auto-created)
+- 0 matches on substring → error
+- >1 matches → error listing matched items
 
 ### Todo Section
 

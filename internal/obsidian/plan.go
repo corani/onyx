@@ -1,3 +1,4 @@
+
 package obsidian
 
 import (
@@ -6,6 +7,7 @@ import (
     "os"
     "regexp"
     "sort"
+    "strconv"
     "strings"
     "time"
 
@@ -19,13 +21,42 @@ var (
     ErrInvalidStartTimeFormat   = errors.New("invalid start time format")
     ErrInvalidEndTimeFormat     = errors.New("invalid end time format")
     ErrEndTimeMustBeAfterStart  = errors.New("end time must be after start time")
-    timePattern                 = regexp.MustCompile(
-        `^(?P<start>[0-2][0-9]:[0-5][0-9])(?:-(?P<end>[0-2][0-9]:[0-5][0-9]))?$`,
-    )
+    ErrEmptyPlannerMatchToken   = errors.New("empty planner match token")
+    ErrMultiplePlannerEntriesMatch = errors.New("multiple planner entries match")
+    ErrInvalidNotePath          = errors.New("invalid note path")
+)
+
+var (
+    timePattern = regexp.MustCompile(
+        `^(?P<start>[0-2][0-9]:[0-5][0-9])(?:-(?P<end>[0-2][0-9]:[0-5][0-9]))?$`)
 )
 
 type Planner struct {
     Note *Note
+}
+
+// readPlannerSection reads the planner section lines from the note file.
+func readPlannerSection(notePath string) ([]string, int, int, os.FileInfo, error) {
+    // gosec: validate notePath is not empty and is absolute
+    if notePath == "" || !strings.HasPrefix(notePath, "/") {
+        return nil, 0, 0, nil, ErrInvalidNotePath
+    }
+
+    // #nosec G304
+    data, err := os.ReadFile(notePath)
+    if err != nil {
+        return nil, 0, 0, nil, fmt.Errorf("read note file: %w", err)
+    }
+
+    info, err := os.Stat(notePath)
+    if err != nil {
+        return nil, 0, 0, nil, fmt.Errorf("stat note file: %w", err)
+    }
+
+    lines := strings.Split(string(data), "\n")
+    sectionStart, sectionEnd := findSection(lines, "## Day Planner")
+
+    return lines, sectionStart, sectionEnd, info, nil
 }
 
 func NewPlanner(note *Note) *Planner { //nolint:revive
@@ -140,34 +171,26 @@ func buildUpdatedEntries(entries []string, insertAt int, newLine string) []strin
 
 // SetStatus toggles the checkbox for the entry matching token (exact time or time range string).
 func (p *Planner) SetStatus(token string, done bool) error {
-    data, err := os.ReadFile(p.Note.Path)
-    if err != nil {
-        return fmt.Errorf("read note file: %w", err)
+    token = strings.ToLower(strings.TrimSpace(token))
+    if token == "" {
+        return ErrEmptyPlannerMatchToken
     }
 
-    info, err := os.Stat(p.Note.Path)
+    lines, sectionStart, sectionEnd, info, err := readPlannerSection(p.Note.Path)
     if err != nil {
-        return fmt.Errorf("stat note file: %w", err)
+        return err
     }
-
-    lines := strings.Split(string(data), "\n")
-    sectionStart, sectionEnd := findSection(lines, "## Day Planner")
 
     if sectionStart == 0 {
         return fmt.Errorf("%w", ErrPlannerSectionNotFound)
     }
 
-    targetIdx := findPlannerLineIndex(lines, sectionStart, sectionEnd, token)
-    if targetIdx == -1 {
-        return fmt.Errorf("%w: %s", ErrPlannerEntryNotFound, token)
+    targetIdx, err := findPlannerLineIndexCI(lines, sectionStart, sectionEnd, token)
+    if err != nil {
+        return err
     }
 
-    line := lines[targetIdx]
-    if done && strings.HasPrefix(line, "- [ ] ") {
-        lines[targetIdx] = strings.Replace(line, "- [ ] ", "- [x] ", 1)
-    } else if !done && strings.HasPrefix(line, "- [x] ") {
-        lines[targetIdx] = strings.Replace(line, "- [x] ", "- [ ] ", 1)
-    }
+    lines[targetIdx] = togglePlannerCheckbox(lines[targetIdx], done)
 
     if err := os.WriteFile(p.Note.Path, []byte(strings.Join(lines, "\n")), info.Mode()); err != nil {
         return fmt.Errorf("write note file: %w", err)
@@ -176,27 +199,84 @@ func (p *Planner) SetStatus(token string, done bool) error {
     return nil
 }
 
-func findPlannerLineIndex(lines []string, sectionStart, sectionEnd int, token string) int {
+// togglePlannerCheckbox toggles the checkbox for a planner line.
+func togglePlannerCheckbox(line string, done bool) string {
+    if done && strings.HasPrefix(line, "- [ ] ") {
+        return strings.Replace(line, "- [ ] ", "- [x] ", 1)
+    }
+
+    if !done && strings.HasPrefix(line, "- [x] ") {
+        return strings.Replace(line, "- [x] ", "- [ ] ", 1)
+    }
+
+    return line
+}
+
+// findPlannerLineIndexCI finds exactly one matching planner entry by case-insensitive substring.
+// Returns index or error if not found or multiple matches.
+func findPlannerLineIndexCI(lines []string, sectionStart, sectionEnd int, needle string) (int, error) {
+    const minFields = 2
+
+    needleLower := strings.ToLower(needle)
+
+    var matches []int
+
     for idx := sectionStart + 1; idx < sectionEnd; idx++ {
-        line := strings.TrimSpace(lines[idx])
-        if !strings.HasPrefix(line, "- [ ] ") && !strings.HasPrefix(line, "- [x] ") {
+        entryText, valid := extractPlannerEntryText(lines[idx], minFields)
+        if !valid {
             continue
         }
 
-        rest := line[6:]
-        
-        fields := strings.Fields(rest)
-        if len(fields) == 0 {
-            continue
-        }
-
-        timeToken := fields[0]
-        if timeToken == token {
-            return idx
+        if strings.Contains(strings.ToLower(entryText), needleLower) {
+            matches = append(matches, idx)
         }
     }
 
-    return -1
+    if len(matches) == 0 {
+        return 0, fmt.Errorf("%w: %q", ErrPlannerEntryNotFound, needle)
+    }
+
+    if len(matches) > 1 {
+        logPlannerMultipleMatches(lines, matches)
+
+        return 0, ErrMultiplePlannerEntriesMatch
+    }
+
+    return matches[0], nil
+}
+
+// extractPlannerEntryText extracts the entry text from a planner line.
+func extractPlannerEntryText(line string, minFields int) (string, bool) {
+    line = strings.TrimSpace(line)
+    if !strings.HasPrefix(line, "- [ ] ") && !strings.HasPrefix(line, "- [x] ") {
+        return "", false
+    }
+
+    rest := line[6:]
+
+    fields := strings.Fields(rest)
+    if len(fields) < minFields {
+        return "", false
+    }
+
+    return strings.Join(fields[1:], " "), true
+}
+
+// logPlannerMultipleMatches logs multiple planner matches for debugging.
+func logPlannerMultipleMatches(lines []string, matches []int) {
+    const (
+        maxLen = 160
+     minFields = 2
+    )
+
+    for choiceIdx, idx := range matches {
+        entryText, _ := extractPlannerEntryText(lines[idx], minFields)
+        if len(entryText) > maxLen {
+            entryText = entryText[:maxLen-3] + "..."
+        }
+
+        log.Error("planner multiple match", "choice", strconv.Itoa(choiceIdx+1), "text", entryText)
+    }
 }
 
 // Helper structures.
