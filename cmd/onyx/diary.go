@@ -1,22 +1,22 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "strings"
+	"fmt"
+	"os"
+	"strings"
 
-    "github.com/charmbracelet/log"
-    "github.com/corani/onyx/internal/config"
-    "github.com/corani/onyx/internal/input"
-    "github.com/corani/onyx/internal/markdown"
-    "github.com/corani/onyx/internal/obsidian"
+	"github.com/charmbracelet/log"
+	"github.com/corani/onyx/internal/config"
+	"github.com/corani/onyx/internal/input"
+	"github.com/corani/onyx/internal/markdown"
+	"github.com/corani/onyx/internal/obsidian"
 )
 
 // DiaryCmd manages the single daily diary entry under `## One Line`.
 type DiaryCmd struct {
-    Date string       `default:"" help:"Date for the daily note (YYYY-MM-DD)." short:"d"`
-    Show DiaryShowCmd `cmd:""     help:"Show the diary entry."`
-    Edit DiaryEditCmd `cmd:""     help:"Edit the diary entry."`
+	Date string       `default:"" help:"Date for the daily note (YYYY-MM-DD)." short:"d"`
+	Show DiaryShowCmd `cmd:""     help:"Show the diary entry."`
+	Edit DiaryEditCmd `cmd:""     help:"Edit the diary entry."`
 }
 
 type DiaryShowCmd struct{}
@@ -24,72 +24,72 @@ type DiaryShowCmd struct{}
 type DiaryEditCmd struct{}
 
 func (cmd *DiaryShowCmd) Run(cfg *config.Config, diaryCmd *DiaryCmd) error {
-    vault := obsidian.NewVault(cfg.Vault)
+	vault := obsidian.NewVault(cfg.Vault)
 
-    note, err := vault.GetDailyNote(diaryCmd.Date)
-    if err != nil {
-        log.Error("Failed to get daily note", "err", err)
+	doc, err := vault.OpenDaily(diaryCmd.Date)
+	if err != nil {
+		log.Error("Failed to open daily document", "err", err)
 
-        return fmt.Errorf("get daily note: %w", err)
-    }
+		return fmt.Errorf("open daily: %w", err)
+	}
 
-    diary := obsidian.NewDiary(note)
+	diary, err := obsidian.NewDiary(doc)
+	if err != nil {
+		log.Error("Failed to read diary entry", "err", err)
 
-    body, err := diary.Get()
-    if err != nil {
-        log.Error("Failed to read diary entry", "err", err)
+		return fmt.Errorf("get diary: %w", err)
+	}
 
-        return fmt.Errorf("get diary: %w", err)
-    }
+	body := diary.Get()
 
-    // Compose markdown for rendering.
-    content := []string{"## One Line", ""}
-    if strings.TrimSpace(body) == "" { // empty
-        content = append(content, "(empty)")
-    } else {
-        content = append(content, body)
-    }
+	// Compose markdown for rendering.
+	content := []string{"## One Line", ""}
+	if strings.TrimSpace(body) == "" { // empty
+		content = append(content, "(empty)")
+	} else {
+		content = append(content, body)
+	}
 
-    if err := markdown.Render(os.Stdout, strings.Join(content, "\n")); err != nil {
-        log.Error("Failed to render markdown", "err", err)
+	if err := markdown.Render(os.Stdout, strings.Join(content, "\n")); err != nil {
+		log.Error("Failed to render markdown", "err", err)
 
-        return fmt.Errorf("render markdown: %w", err)
-    }
+		return fmt.Errorf("render markdown: %w", err)
+	}
 
-    return nil
+	return nil
 }
 
 func (cmd *DiaryEditCmd) Run(cfg *config.Config, diaryCmd *DiaryCmd) error {
-    vault := obsidian.NewVault(cfg.Vault)
+	vault := obsidian.NewVault(cfg.Vault)
 
-    note, err := vault.GetDailyNote(diaryCmd.Date)
-    if err != nil {
-        log.Error("Failed to get daily note", "err", err)
+	doc, err := vault.OpenDaily(diaryCmd.Date)
+	if err != nil {
+		log.Error("Failed to open daily document", "err", err)
 
-        return fmt.Errorf("get daily note: %w", err)
-    }
+		return fmt.Errorf("open daily: %w", err)
+	}
 
-    diary := obsidian.NewDiary(note)
-	
-    existing, err := diary.Get()
-    if err != nil {
-        log.Error("Failed to read diary entry", "err", err)
+	diary, err := obsidian.NewDiary(doc)
+	if err != nil {
+		log.Error("Failed to read diary entry", "err", err)
 
-        return fmt.Errorf("get diary: %w", err)
-    }
+		return fmt.Errorf("get diary: %w", err)
+	}
 
-    updated, err := input.PromptForTextWithInitial("Edit diary entry", existing)
-    if err != nil {
-        log.Error("Failed during diary edit input", "err", err)
+	existing := diary.Get()
 
-        return fmt.Errorf("input diary: %w", err)
-    }
+	updated, err := input.PromptForTextWithInitial("Edit diary entry", existing)
+	if err != nil {
+		log.Error("Failed during diary edit input", "err", err)
 
-    if err := diary.Set(updated); err != nil {
-        log.Error("Failed to write diary entry", "err", err)
+		return fmt.Errorf("input diary: %w", err)
+	}
 
-        return fmt.Errorf("set diary: %w", err)
-    }
+	if err := diary.Set(updated); err != nil {
+		log.Error("Failed to write diary entry", "err", err)
 
-    return nil
+		return fmt.Errorf("set diary: %w", err)
+	}
+
+	return nil
 }
