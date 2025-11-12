@@ -1,65 +1,33 @@
 package obsidian
 
-import (
-	"errors"
-	"fmt"
-	"os"
-	"slices"
-	"strings"
-)
-
-var ErrNotesSectionNotFound = errors.New("notes section not found in note")
-
 type Note struct {
-	Vault *Vault
-	Path  string
-	Date  string
+	Doc *Document
+	Sec *Section
 }
 
-func (n *Note) List() (string, error) {
-	data, err := os.ReadFile(n.Path)
+func NewNote(doc *Document) (*Note, error) {
+	sec, err := doc.Section("## Notes")
 	if err != nil {
-		return "", fmt.Errorf("read note file: %w", err)
+		return nil, err
 	}
 
-	lines := strings.Split(string(data), "\n")
+	return &Note{
+		Doc: doc,
+		Sec: sec,
+	}, nil
+}
 
-	start, end := findSection(lines, "## Notes")
-	if start == 0 {
-		return "", nil
+func (n *Note) List() string {
+	body := n.Sec.Body()
+	if body != "" {
+		body = "\n" + body + "\n"
 	}
 
-	return strings.Join(lines[start:end], "\n"), nil
+	return n.Sec.Header + "\n" + body
 }
 
 func (n *Note) Create(text string) error {
-	data, err := os.ReadFile(n.Path)
-	if err != nil {
-		return fmt.Errorf("read note file: %w", err)
-	}
+	n.Sec.AppendLine(text)
 
-	// Stat the file to get its original permissions
-	info, err := os.Stat(n.Path)
-	if err != nil {
-		return fmt.Errorf("stat note file: %w", err)
-	}
-
-	lines := strings.Split(string(data), "\n")
-
-	start, end := findSection(lines, "## Notes")
-	if start == 0 {
-		return fmt.Errorf("%w", ErrNotesSectionNotFound)
-	}
-
-	// Insert the new text
-	newLines := slices.Clone(lines[:end])
-	newLines = append(newLines, text, "")
-	newLines = append(newLines, lines[end:]...)
-
-	// Write back to the file with the original permissions
-	if err := os.WriteFile(n.Path, []byte(strings.Join(newLines, "\n")), info.Mode()); err != nil {
-		return fmt.Errorf("write note file: %w", err)
-	}
-
-	return nil
+	return n.Doc.Save(false)
 }

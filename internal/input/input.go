@@ -87,6 +87,43 @@ func PromptForText(prompt string) (string, error) {
 	return fm.textarea.Value(), nil
 }
 
+// PromptForTextWithInitial shows a multiline textarea pre-filled with the provided initial value.
+// Behavior (save / cancel) matches PromptForText.
+func PromptForTextWithInitial(prompt, initial string) (string, error) {
+	const (
+		defaultWidth  = 80
+		defaultHeight = 10
+	)
+
+	textareaModel := textarea.New()
+	textareaModel.Placeholder = prompt + " (Ctrl+S to save, Esc to cancel)"
+	textareaModel.Focus()
+	textareaModel.CharLimit = 0
+	textareaModel.SetWidth(defaultWidth)
+	textareaModel.SetHeight(defaultHeight)
+	textareaModel.SetValue(initial)
+
+	m := noteInputModel{textarea: textareaModel, done: false, canceled: false}
+	program := tea.NewProgram(m)
+
+	result, err := program.Run()
+	if err != nil {
+		return "", fmt.Errorf("input prompt failed: %w", err)
+	}
+
+	//nolint:varnamelen
+	fm, ok := result.(noteInputModel)
+	if !ok {
+		return "", fmt.Errorf("%w: %T", ErrUnexpectedModelType, result)
+	}
+
+	if fm.canceled {
+		return "", ErrInputCanceled
+	}
+
+	return fm.textarea.Value(), nil
+}
+
 // -------------------- Single-line input --------------------
 
 type lineInputModel struct {

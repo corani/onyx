@@ -3,7 +3,6 @@ package obsidian
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -11,143 +10,114 @@ import (
 )
 
 var (
-	ErrTodoSectionNotFound = errors.New("todo section not found in note")
 	ErrTodoNotFound        = errors.New("no todo item matched substring")
 	ErrTodoMultipleMatches = errors.New("multiple todo items matched substring")
 	ErrEmptyTodoText       = errors.New("empty todo text")
 	ErrEmptyTodoMatch      = errors.New("empty match substring")
 )
 
-// Todos manages the `## Todo` section of a daily note.
-type Todos struct {
-	Note *Note
+// Todo manages the `## Todo` section of a daily note.
+type Todo struct {
+	Doc *Document
+	Sec *Section
 }
 
-func NewTodos(note *Note) *Todos { //nolint:revive
-	return &Todos{Note: note}
-}
-
-// List returns the Todo section markdown (including header) or empty string if missing.
-func (t *Todos) List() (string, error) {
-	data, err := os.ReadFile(t.Note.Path)
+func NewTodo(doc *Document) (*Todo, error) {
+	sec, err := doc.Section("## Todo")
 	if err != nil {
-		return "", fmt.Errorf("read note file: %w", err)
+		return nil, err
 	}
 
-	lines := strings.Split(string(data), "\n")
-	
-	start, end := findSection(lines, "## Todo")
-	if start == 0 { // missing
-		return "", nil
+	return &Todo{
+		Doc: doc,
+		Sec: sec,
+	}, nil
+}
+
+// List returns the Todo section markdown (including header).
+func (t *Todo) List() string {
+	body := t.Sec.Body()
+	if body != "" {
+		body = "\n" + body + "\n"
 	}
 
-	return strings.Join(lines[start:end], "\n"), nil
+	return t.Sec.Header + "\n" + body
 }
 
 // Add inserts a new todo optionally under a parent matched by substring. Case-insensitive.
 // Parent may be blank for top-level.
-func (t *Todos) Add(text, parentSubstring string) error {
+func (t *Todo) Add(text, parentSubstring string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return ErrEmptyTodoText
 	}
 
-	lines, info, sectionStart, sectionEnd, err := t.loadSection()
+	bodyLines := t.Sec.BodyLines()
+
+	insertIdx, newLine, err := t.computeInsertionBody(bodyLines, text, parentSubstring)
 	if err != nil {
 		return err
 	}
 
-	insertIdx, newLine, err := t.computeInsertion(lines, sectionStart, sectionEnd, text, parentSubstring)
-	if err != nil {
-		return err
-	}
+	updated := append(append(append([]string{}, bodyLines[:insertIdx]...), newLine), bodyLines[insertIdx:]...)
+	t.Sec.SetBody(strings.Join(updated, "\n"))
 
-	updated := make([]string, 0, len(lines)+1)
-	updated = append(updated, lines[:insertIdx]...)
-	updated = append(updated, newLine)
-	updated = append(updated, lines[insertIdx:]...)
-
-	if err := os.WriteFile(t.Note.Path, []byte(strings.Join(updated, "\n")), info.Mode()); err != nil {
-		return fmt.Errorf("write note file: %w", err)
-	}
-
-	return nil
+	return t.Doc.Save(false)
 }
 
 // SetStatus toggles the checkbox for a single matched todo (substring match, case-insensitive).
-func (t *Todos) SetStatus(substring string, done bool) error {
+func (t *Todo) SetStatus(substring string, done bool) error {
 	substring = strings.TrimSpace(substring)
 	if substring == "" {
 		return ErrEmptyTodoMatch
 	}
 
-	lines, info, sectionStart, sectionEnd, err := t.loadSection()
+	sec, err := t.Doc.Section("## Todo")
 	if err != nil {
 		return err
 	}
 
-	matchIdx, _, err := findSingleMatch(lines, sectionStart+1, sectionEnd, substring)
+	body := sec.BodyLines()
+
+	matchIdx, _, err := findSingleMatchBody(body, substring)
 	if err != nil {
 		return err
 	}
 
-	line := lines[matchIdx]
+	line := body[matchIdx]
+
 	if done && strings.Contains(line, "- [ ] ") {
-		lines[matchIdx] = replaceFirst(line, "- [ ] ", "- [x] ")
+		body[matchIdx] = replaceFirst(line, "- [ ] ", "- [x] ")
 	} else if !done && strings.Contains(line, "- [x] ") {
-		lines[matchIdx] = replaceFirst(line, "- [x] ", "- [ ] ")
+		body[matchIdx] = replaceFirst(line, "- [x] ", "- [ ] ")
 	}
 
-	if err := os.WriteFile(t.Note.Path, []byte(strings.Join(lines, "\n")), info.Mode()); err != nil {
-		return fmt.Errorf("write note file: %w", err)
-	}
+	sec.SetBody(strings.Join(body, "\n"))
 
-	return nil
+	return t.Doc.Save(false)
 }
 
 // loadSection reads file, splits to lines and locates todo section.
-func (t *Todos) loadSection() ([]string, os.FileInfo, int, int, error) {
-	data, err := os.ReadFile(t.Note.Path)
-	if err != nil {
-		return nil, nil, 0, 0, fmt.Errorf("read note file: %w", err)
-	}
+// legacy loadSection removed; Section abstraction used instead
 
-	info, err := os.Stat(t.Note.Path)
-	if err != nil {
-		return nil, nil, 0, 0, fmt.Errorf("stat note file: %w", err)
-	}
-
-	lines := strings.Split(string(data), "\n")
-
-	sectionStart, sectionEnd := findSection(lines, "## Todo")
-	if sectionStart == 0 {
-		return nil, nil, 0, 0, fmt.Errorf("%w", ErrTodoSectionNotFound)
-	}
-
-	return lines, info, sectionStart, sectionEnd, nil
-}
-
-func (t *Todos) computeInsertion(
-	lines []string,
-	sectionStart, sectionEnd int,
-	text, parentSubstring string,
-) (int, string, error) {
-	insertIdx := sectionEnd
-
+func (t *Todo) computeInsertionBody(body []string, text, parentSubstring string) (int, string, error) {
+	insertIdx := len(body)
 	newLine := "- [ ] " + text
+
 	if parentSubstring == "" {
 		return insertIdx, newLine, nil
 	}
 
-	parentIdx, parentDepth, err := findSingleMatch(lines, sectionStart+1, sectionEnd, parentSubstring)
+	parentIdx, parentDepth, err := findSingleMatchBody(body, parentSubstring)
 	if err != nil {
 		return 0, "", err
 	}
 
 	blockEnd := parentIdx + 1
-	for blockEnd < sectionEnd {
-		line := lines[blockEnd]
-		if !isTodoLine(line) { // allow blank or non-todo lines inside section
+	for blockEnd < len(body) {
+		line := body[blockEnd]
+
+		if !isTodoLine(line) {
 			blockEnd++
 
 			continue
@@ -166,20 +136,19 @@ func (t *Todos) computeInsertion(
 
 // findSingleMatch finds exactly one matching todo line by case-insensitive substring.
 // Returns index and depth.
-func findSingleMatch(lines []string, start, end int, needle string) (int, int, error) {
+func findSingleMatchBody(body []string, needle string) (int, int, error) {
 	needleLower := strings.ToLower(needle)
 
 	var matches []int
 
-	for lineIdx := start; lineIdx < end; lineIdx++ { // explicit name for clarity
-		line := lines[lineIdx]
+	for index, line := range body {
 		if !isTodoLine(line) {
 			continue
 		}
 
 		text := extractTodoText(line)
 		if strings.Contains(strings.ToLower(text), needleLower) {
-			matches = append(matches, lineIdx)
+			matches = append(matches, index)
 		}
 	}
 
@@ -187,12 +156,11 @@ func findSingleMatch(lines []string, start, end int, needle string) (int, int, e
 		return 0, 0, fmt.Errorf("%w: %q", ErrTodoNotFound, needle)
 	}
 
+	const maxLen = 160
+
 	if len(matches) > 1 {
-		for choiceIdx, lineIdx := range matches {
-			text := extractTodoText(lines[lineIdx])
-
-			const maxLen = 160
-
+		for choiceIdx, idx := range matches {
+			text := extractTodoText(body[idx])
 			if len(text) > maxLen {
 				text = text[:maxLen-3] + "..."
 			}
@@ -204,7 +172,7 @@ func findSingleMatch(lines []string, start, end int, needle string) (int, int, e
 	}
 
 	idx := matches[0]
-	depth := countLeadingTabs(lines[idx])
+	depth := countLeadingTabs(body[idx])
 
 	return idx, depth, nil
 }

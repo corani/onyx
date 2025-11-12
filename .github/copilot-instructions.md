@@ -7,37 +7,35 @@
 - The main entry point is `cmd/onyx/main.go`, which wires together commands for adding and listing
   notes, managing the day planner, and todos.
 - Notes are stored as markdown files under `$VAULT/Journal/Daily/YYYY-MM-DD.md`.
-- The project is structured with clear separation: `internal/config` (configuration), 
-  `internal/input` (user input), `internal/markdown` (rendering), and `internal/obsidian` 
+- The project is structured with clear separation: `internal/config` (configuration),
+  `internal/input` (user input), `internal/markdown` (rendering), and `internal/obsidian`
   (vault/note logic).
 
 ## Key Components
 
-- **Config**: Loads environment variables from `.env`, `$XDG_CONFIG_HOME/onyx/config`, 
+- **Config**: Loads environment variables from `.env`, `$XDG_CONFIG_HOME/onyx/config`,
   or `$HOME/.config/onyx/config`. The main variable is `ONYX_VAULT` (path to the Obsidian vault).
-- **Obsidian Vault**: `internal/obsidian/vault.go` and `note.go` handle locating and manipulating
-  daily note files.
-- **Input**: Uses [Bubbletea](https://github.com/charmbracelet/bubbletea) and 
+- **Vault & Document**: `internal/obsidian/vault.go` provides `OpenDaily(date)` which returns a
+  shared in-memory `Document` (`internal/obsidian/document.go`) for the daily note. The legacy
+  `GetDailyNote` has been removed; all commands now work from a single loaded `Document`.
+- **Sections**: A `Section` is a header block (e.g. `## Todo`) accessed through `Document.Section`.
+  Domain types (`Diary`, `Planner`, `Todos`, `Note`) receive a `*Document` and never re-open files.
+- **Formatting**: Section invariants (header + blank line + body + optional trailing blank) are
+  enforced centrally by `Section.SetBody` / `AppendLine`.
+- **Input**: Uses [Bubbletea](https://github.com/charmbracelet/bubbletea) and
   [Bubbles](https://github.com/charmbracelet/bubbles) for interactive TUI input.
 - **Markdown Rendering**: Uses [Glamour](https://github.com/charmbracelet/glamour) for terminal
   markdown rendering.
 
 ## Developer Workflows
 
-- **Build**: Standard Go build: `go build ./cmd/onyx`
-- **Run**: `ONYX_VAULT=/path/to/vault ./onyx note add` or `note list`
-- **Test**: Standard Go test: `go test ./...`
-- **Debug**: No custom debug scripts; use standard Go tools.
-- **Dependencies**: Managed via Go modules (`go.mod`).
+ - `internal/obsidian/diary.go`: Diary section (`## One Line`) logic
+ - `cmd/onyx/diary.go`: Diary show/edit command
 
 ## Project Conventions
 
-- All user-facing text input is handled via the TUI prompt in `internal/input`.
-- Notes must have a `## Notes` section header in the markdown file for correct parsing/appending.
-- Planner entries live under `## Day Planner`.
-- Todos live under `## Todo`.
-- Logging uses [charmbracelet/log](https://github.com/charmbracelet/log).
-- All configuration is via environment variables or `.env` files; no CLI flags for config paths.
+- To show the diary entry: `ONYX_VAULT=~/vault ./onyx diary show`
+- To edit the diary entry: `ONYX_VAULT=~/vault ./onyx diary edit`
 
 ## Integration Points
 
@@ -50,10 +48,23 @@
 - To add a note for today: `ONYX_VAULT=~/vault ./onyx note add "My note text"`
 - To list notes for a date: `ONYX_VAULT=~/vault ./onyx note list -d 2025-10-28`
 - To add a planner entry: `ONYX_VAULT=~/vault ./onyx plan add 09:30 "Start work"`
-- To add a todo: `ONYX_VAULT=~/vault ./onyx todo add "Inbox Zero"`
-- To nest a todo under a parent (substring match): `ONYX_VAULT=~/vault ./onyx todo add --parent Inbox "Archive old mail"`
 - To check a todo by substring: `ONYX_VAULT=~/vault ./onyx todo check "Inbox Zero"`
+ 
+## Section Formatting Rules
 
+Every managed section in a daily note follows a uniform layout enforced by the `Section` API:
+
+```
+## Header
+
+<body (0+ lines)>
+
+```
+
+- Always exactly one blank line after the header.
+- Empty body: header plus a single blank line (no trailing blank after body).
+- Non-empty body: one trailing blank line after the last body line.
+- Callers use `SetBody` / `AppendLine`; newline normalization is automatic.
 ## Todo Section
 
 The daily note may contain a section:
@@ -69,6 +80,36 @@ Todos are markdown checkbox list items. Nesting is represented by leading tab ch
 - [ ] Architecture
   - [ ] REST Runtime
 - [x] Add 'plan' command to Onyx
+## Diary Section
+
+The daily note must contain the section:
+
+```
+## One Line
+```
+
+The diary command manages the entire body of this section (single free-form multiline entry).
+
+- `diary show` renders the section with a placeholder `(empty)` when the body is blank.
+- `diary edit` opens a multiline textarea pre-filled with the current body; Ctrl+S saves; Esc cancels.
+
+Saving replaces the section as:
+
+```
+## One Line
+
+<body>
+
+```
+
+If the body is empty or whitespace-only it saves only:
+
+```
+## One Line
+
+```
+
+Whitespace-only bodies are treated as empty; user input otherwise preserved verbatim. The section is not auto-created if missing (error returned). Newline formatting is applied by the shared `Section` logic.
 ```
 
 Adding with `--parent` performs a case-insensitive substring match against exactly one existing
@@ -87,7 +128,12 @@ The section must already exist; it is not created implicitly.
 ## Key Files
 
 - `cmd/onyx/main.go`: CLI entry and command wiring
-- `internal/obsidian/vault.go`, `note.go`: Vault and note logic
+- `internal/obsidian/vault.go`: Daily note path resolution (`OpenDaily`) only
+- `internal/obsidian/document.go`: `Document` & `Section` abstractions
+- `internal/obsidian/diary.go`: Diary logic (receives `*Document`)
+- `internal/obsidian/plan.go`: Planner logic (receives `*Document`)
+- `internal/obsidian/todo.go`: Todo logic (receives `*Document`)
+- `internal/obsidian/note.go`: Notes section logic (receives `*Document`)
 - `internal/input/input.go`: TUI input
 - `internal/markdown/markdown.go`: Markdown rendering
 - `internal/config/config.go`: Config loading

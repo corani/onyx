@@ -40,11 +40,11 @@ type TodoUncheckCmd struct {
 func (cmd *TodoAddCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 	vault := obsidian.NewVault(cfg.Vault)
 
-	note, err := vault.GetDailyNote(todoCmd.Date)
+	doc, err := vault.OpenDaily(todoCmd.Date)
 	if err != nil {
-		log.Error("Failed to get daily note", "err", err)
+		log.Error("Failed to open daily document", "err", err)
 
-		return fmt.Errorf("get daily note: %w", err)
+		return fmt.Errorf("open daily: %w", err)
 	}
 
 	interactive := cmd.Text == ""
@@ -71,7 +71,13 @@ func (cmd *TodoAddCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 		cmd.Parent = strings.TrimSpace(parent)
 	}
 
-	todos := obsidian.NewTodos(note)
+	todos, err := obsidian.NewTodo(doc)
+	if err != nil {
+		log.Error("Failed to open todo section", "err", err)
+
+		return fmt.Errorf("new todo: %w", err)
+	}
+
 	if err := todos.Add(cmd.Text, cmd.Parent); err != nil {
 		log.Error("Failed to add todo", "err", err)
 
@@ -84,25 +90,21 @@ func (cmd *TodoAddCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 func (cmd *TodoListCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 	vault := obsidian.NewVault(cfg.Vault)
 
-	note, err := vault.GetDailyNote(todoCmd.Date)
+	doc, err := vault.OpenDaily(todoCmd.Date)
 	if err != nil {
-		log.Error("Failed to get daily note", "err", err)
+		log.Error("Failed to open daily document", "err", err)
 
-		return fmt.Errorf("get daily note: %w", err)
+		return fmt.Errorf("open daily: %w", err)
 	}
 
-	todos := obsidian.NewTodos(note)
-
-	section, err := todos.List()
+	todos, err := obsidian.NewTodo(doc)
 	if err != nil {
-		log.Error("Failed to list todos", "err", err)
+		log.Error("Failed to open todo section", "err", err)
 
-		return fmt.Errorf("list todos: %w", err)
+		return fmt.Errorf("new todo: %w", err)
 	}
 
-	if section == "" {
-		section = "## Todo\n\n(empty)"
-	}
+	section := todos.List()
 
 	if err := markdown.Render(os.Stdout, section); err != nil {
 		log.Error("Failed to render markdown", "err", err)
@@ -116,14 +118,20 @@ func (cmd *TodoListCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 func (cmd *TodoCheckCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 	vault := obsidian.NewVault(cfg.Vault)
 
-	note, err := vault.GetDailyNote(todoCmd.Date)
+	doc, err := vault.OpenDaily(todoCmd.Date)
 	if err != nil {
-		log.Error("Failed to get daily note", "err", err)
+		log.Error("Failed to open daily document", "err", err)
 
-		return fmt.Errorf("get daily note: %w", err)
+		return fmt.Errorf("open daily: %w", err)
 	}
 
-	todos := obsidian.NewTodos(note)
+	todos, err := obsidian.NewTodo(doc)
+	if err != nil {
+		log.Error("Failed to open todo section", "err", err)
+
+		return fmt.Errorf("new todo: %w", err)
+	}
+
 	if err := todos.SetStatus(cmd.Match, true); err != nil {
 		log.Error("Failed to check todo", "err", err)
 
@@ -136,14 +144,20 @@ func (cmd *TodoCheckCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 func (cmd *TodoUncheckCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {
 	vault := obsidian.NewVault(cfg.Vault)
 
-	note, err := vault.GetDailyNote(todoCmd.Date)
+	doc, err := vault.OpenDaily(todoCmd.Date)
 	if err != nil {
-		log.Error("Failed to get daily note", "err", err)
+		log.Error("Failed to open daily document", "err", err)
 
-		return fmt.Errorf("get daily note: %w", err)
+		return fmt.Errorf("open daily: %w", err)
 	}
 
-	todos := obsidian.NewTodos(note)
+	todos, err := obsidian.NewTodo(doc)
+	if err != nil {
+		log.Error("Failed to open todo section", "err", err)
+
+		return fmt.Errorf("new todo: %w", err)
+	}
+
 	if err := todos.SetStatus(cmd.Match, false); err != nil {
 		log.Error("Failed to uncheck todo", "err", err)
 
