@@ -6,12 +6,13 @@ import (
 	"github.com/corani/onyx/internal/config"
 )
 
-
+//nolint:tagalign
 type CLI struct {
-	Vault string  `help:"Path to the Obsidian vault." short:"v"`
-	Note  NoteCmd `cmd:""                             help:"Manage notes."`
-	Plan  PlanCmd `cmd:""                             help:"Manage day planner."`
-	Todo  TodoCmd `cmd:""                             help:"Manage todos."`
+	Vault string   `help:"Path to the Obsidian vault." short:"v"`
+	Note  NoteCmd  `cmd:"" help:"Manage notes."`
+	Plan  PlanCmd  `cmd:"" help:"Manage day planner."`
+	Todo  TodoCmd  `cmd:"" help:"Manage todos."`
+	Diary DiaryCmd `cmd:"" help:"Manage daily diary entry."`
 }
 
 func main() {

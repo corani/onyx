@@ -24,20 +24,13 @@
 
 ## Developer Workflows
 
-- **Build**: Standard Go build: `go build ./cmd/onyx`
-- **Run**: `ONYX_VAULT=/path/to/vault ./onyx note add` or `note list`
-- **Test**: Standard Go test: `go test ./...`
-- **Debug**: No custom debug scripts; use standard Go tools.
-- **Dependencies**: Managed via Go modules (`go.mod`).
+ - `internal/obsidian/diary.go`: Diary section (`## One Line`) logic
+ - `cmd/onyx/diary.go`: Diary show/edit command
 
 ## Project Conventions
 
-- All user-facing text input is handled via the TUI prompt in `internal/input`.
-- Notes must have a `## Notes` section header in the markdown file for correct parsing/appending.
-- Planner entries live under `## Day Planner`.
-- Todos live under `## Todo`.
-- Logging uses [charmbracelet/log](https://github.com/charmbracelet/log).
-- All configuration is via environment variables or `.env` files; no CLI flags for config paths.
+ - To show the diary entry: `ONYX_VAULT=~/vault ./onyx diary show`
+ - To edit the diary entry: `ONYX_VAULT=~/vault ./onyx diary edit`
 
 ## Integration Points
 
@@ -50,10 +43,7 @@
 - To add a note for today: `ONYX_VAULT=~/vault ./onyx note add "My note text"`
 - To list notes for a date: `ONYX_VAULT=~/vault ./onyx note list -d 2025-10-28`
 - To add a planner entry: `ONYX_VAULT=~/vault ./onyx plan add 09:30 "Start work"`
-- To add a todo: `ONYX_VAULT=~/vault ./onyx todo add "Inbox Zero"`
-- To nest a todo under a parent (substring match): `ONYX_VAULT=~/vault ./onyx todo add --parent Inbox "Archive old mail"`
 - To check a todo by substring: `ONYX_VAULT=~/vault ./onyx todo check "Inbox Zero"`
-
 ## Todo Section
 
 The daily note may contain a section:
@@ -69,6 +59,36 @@ Todos are markdown checkbox list items. Nesting is represented by leading tab ch
 - [ ] Architecture
   - [ ] REST Runtime
 - [x] Add 'plan' command to Onyx
+## Diary Section
+
+The daily note must contain the section:
+
+```
+## One Line
+```
+
+The diary command manages the entire body of this section (single free-form multiline entry).
+
+- `diary show` renders the section with a placeholder `(empty)` when the body is blank.
+- `diary edit` opens a multiline textarea pre-filled with the current body; Ctrl+S saves; Esc cancels.
+
+Saving replaces the section as:
+
+```
+## One Line
+
+<body>
+
+```
+
+If the body is empty or whitespace-only it saves only:
+
+```
+## One Line
+
+```
+
+Whitespace-only bodies are treated as empty; user input otherwise preserved verbatim. The section is not auto-created if missing (error returned).
 ```
 
 Adding with `--parent` performs a case-insensitive substring match against exactly one existing
