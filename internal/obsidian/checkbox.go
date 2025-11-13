@@ -182,12 +182,13 @@ func FindSingleCheckboxMatch(lines []string, needle string) (int, Checkbox, erro
 	var matches []int
 
 	for index, line := range lines {
-		c, ok := ParseCheckbox(line)
+		checkbox, ok := ParseCheckbox(line)
 		if !ok {
 			continue
 		}
 
-		if strings.Contains(strings.ToLower(c.Text), needle) {
+		// Match against the rendered checkbox line (includes time token if present).
+		if strings.Contains(strings.ToLower(checkbox.String()), needle) {
 			matches = append(matches, index)
 		}
 	}
