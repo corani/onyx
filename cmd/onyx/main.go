@@ -8,11 +8,12 @@ import (
 
 //nolint:tagalign
 type CLI struct {
-	Vault string   `help:"Path to the Obsidian vault." short:"v"`
-	Note  NoteCmd  `cmd:"" help:"Manage notes."`
-	Plan  PlanCmd  `cmd:"" help:"Manage day planner."`
-	Todo  TodoCmd  `cmd:"" help:"Manage todos."`
-	Diary DiaryCmd `cmd:"" help:"Manage daily diary entry."`
+	Vault   string     `help:"Path to the Obsidian vault." short:"v"`
+	Note    NoteCmd    `cmd:"" help:"Manage notes."`
+	Plan    PlanCmd    `cmd:"" help:"Manage day planner."`
+	Todo    TodoCmd    `cmd:"" help:"Manage todos."`
+	Version VersionCmd `cmd:"" help:"Show version."`
+	Diary   DiaryCmd   `cmd:"" help:"Manage daily diary entry."`
 }
 
 func main() {

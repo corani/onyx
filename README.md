@@ -135,11 +135,6 @@ Provide a case-insensitive substring of the planner entry text (must match exact
 ./onyx plan uncheck "Start work"
 ```
 
-Errors:
-- Missing section → error (not auto-created)
-- 0 matches on substring → error
-- >1 matches → error listing matched items
-
 ### Todo Section
 
 Add a `## Todo` section to your daily note to manage tasks:
@@ -178,12 +173,6 @@ Check / uncheck by substring (must match exactly one todo’s text):
 ./onyx todo check "Inbox Zero"
 ./onyx todo uncheck "Architecture"
 ```
-
-Errors:
-
-- Missing section → error (not auto-created)
-- 0 matches on substring → error
-- >1 matches → error listing matched items
 
 ### Notes
 
