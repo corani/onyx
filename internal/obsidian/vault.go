@@ -18,7 +18,7 @@ func NewVault(path string) *Vault {
 }
 
 // OpenDaily loads the daily note as a Document for the given date ("YYYY-MM-DD").
-// Empty date uses today. Returns Err if file missing.
+// An empty date uses today. Returns an error if the file is missing.
 func (v *Vault) OpenDaily(date string) (*Document, error) {
 	if date == "" {
 		date = time.Now().Format("2006-01-02")
