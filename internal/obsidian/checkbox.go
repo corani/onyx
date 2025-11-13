@@ -187,7 +187,8 @@ func FindSingleCheckboxMatch(lines []string, needle string) (int, Checkbox, erro
 			continue
 		}
 
-		if strings.Contains(strings.ToLower(c.Text), needle) {
+		// Match against the rendered checkbox line (includes time token if present).
+		if strings.Contains(strings.ToLower(c.String()), needle) {
 			matches = append(matches, index)
 		}
 	}
