@@ -7,7 +7,7 @@ import (
 )
 
 // Document represents a loaded markdown daily note.
-// Lines always excludes the final newline; splitting done on '\n'.
+// Lines is the file split on '\n' (the final newline is excluded when present).
 type Document struct {
 	Path  string
 	Mode  os.FileMode
@@ -16,12 +16,8 @@ type Document struct {
 }
 
 // Section is a view over a header section in a Document.
-// Invariant after any mutation:
-//
-//	Header
-//	<blank line>
-//	body (0+ lines)
-//	<blank line> (only if body non-empty)
+// Sections follow the invariant: header, a blank line, body (0+ lines), optional trailing blank.
+// Start is the header line index; End is exclusive (one past last line of section).
 //
 // Start points to header line index; End is exclusive (one past last line of section).
 type Section struct {

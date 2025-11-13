@@ -1,6 +1,6 @@
 package obsidian
 
-// Diary manages the `## One Line` section of a daily note using a shared Document.
+// Diary manages the `## One Line` section of a daily note.
 type Diary struct {
 	Doc *Document
 	Sec *Section
@@ -18,20 +18,13 @@ func NewDiary(doc *Document) (*Diary, error) {
 	}, nil
 }
 
-// Get returns the body of the diary section (without the header).
+// Get returns the diary section body (without the header).
 func (d *Diary) Get() string {
 	return d.Sec.Body()
 }
 
-// Set replaces the entire diary section with the provided body. The section is written as:
-//
-//	## One Line
-//	<blank line>
-//	<body>
-//	<blank line> (only if body is non-empty)
-//
-// If body is empty (or whitespace), only a single blank line after the header is written.
-// The user's body is preserved verbatim (no wrapping or trimming).
+// Set replaces the diary body while preserving section newline invariants.
+// Whitespace-only bodies are treated as empty; non-empty bodies are preserved verbatim.
 func (d *Diary) Set(body string) error {
 	d.Sec.SetBody(body)
 
