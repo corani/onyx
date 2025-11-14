@@ -30,11 +30,11 @@ type PlanAddCmd struct {
 type PlanListCmd struct{}
 
 type PlanCheckCmd struct {
-	Time string `arg:"" help:"Start time or time range (HH:MM or HH:MM-HH:MM)." name:"time"`
+	Time string `arg:"" help:"Start time or time range (HH:MM or HH:MM-HH:MM)." name:"time" optional:""`
 }
 
 type PlanUncheckCmd struct {
-	Time string `arg:"" help:"Start time or time range (HH:MM or HH:MM-HH:MM)." name:"time"`
+	Time string `arg:"" help:"Start time or time range (HH:MM or HH:MM-HH:MM)." name:"time" optional:""`
 }
 
 func (cmd *PlanAddCmd) Run(cfg *config.Config, planCmd *PlanCmd) error {

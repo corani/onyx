@@ -30,11 +30,11 @@ type TodoAddCmd struct {
 type TodoListCmd struct{}
 
 type TodoCheckCmd struct {
-	Match string `arg:"" help:"Substring to match a single todo item." name:"match"`
+	Match string `arg:"" help:"Substring to match a single todo item." name:"match" optional:""`
 }
 
 type TodoUncheckCmd struct {
-	Match string `arg:"" help:"Substring to match a single todo item." name:"match"`
+	Match string `arg:"" help:"Substring to match a single todo item." name:"match" optional:""`
 }
 
 func (cmd *TodoAddCmd) Run(cfg *config.Config, todoCmd *TodoCmd) error {

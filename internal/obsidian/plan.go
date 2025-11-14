@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+
+	"github.com/corani/onyx/internal/input"
 )
 
 type Plan struct {
@@ -93,19 +95,36 @@ func findInsertionIndex(entries []string, startTime time.Time, startStr, endStr,
 // SetStatus toggles the checkbox for the entry matching token (exact time or range string).
 func (p *Plan) SetStatus(token string, done bool) error {
 	token = strings.ToLower(strings.TrimSpace(token))
-	if token == "" {
-		return fmt.Errorf("%w: %s", ErrEmpty, token)
-	}
-
 	body := p.Sec.BodyLines()
 
-	// reconstruct lines slice for matching: mimic previous entries (no header, potential blank? already normalized)
-	// The previous code included the header line and worked over full file indices; now we work within body slice.
-	// We'll search in body for matching token.
-	lineIndex, _, err := FindSingleCheckboxMatch(body, token)
-	if err != nil {
-		return err
+	matchesIdx, matches := FindCheckboxMatches(body, token)
+	if len(matchesIdx) == 0 {
+		return ErrNotFound
 	}
+
+	var chosen int
+
+	if len(matchesIdx) == 1 {
+		chosen = 0
+	} else {
+		choices := make([]string, len(matches))
+		for i, cb := range matches {
+			choices[i] = MatchSummary(cb)
+		}
+
+		sel, err := input.PromptForSelection("Choose planner entry:", choices)
+		if err != nil {
+			return fmt.Errorf("select planner entry: %w", err)
+		}
+
+		chosen = sel
+	}
+
+	if chosen < 0 || chosen >= len(matchesIdx) {
+		return fmt.Errorf("%w: invalid selection", ErrNotFound)
+	}
+
+	lineIndex := matchesIdx[chosen]
 
 	body[lineIndex] = ToggleLineCheckbox(body[lineIndex], done)
 	p.Sec.SetBody(strings.Join(body, "\n"))
