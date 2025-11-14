@@ -3,6 +3,8 @@ package obsidian
 import (
 	"fmt"
 	"strings"
+
+	"github.com/corani/onyx/internal/input"
 )
 
 // Todo manages the `## Todo` section of a daily note.
@@ -57,18 +59,39 @@ func (t *Todo) Add(text, parentSubstring string) error {
 // SetStatus toggles the checkbox for a single matched todo (substring, case-insensitive).
 func (t *Todo) SetStatus(substring string, done bool) error {
 	substring = strings.TrimSpace(substring)
-	if substring == "" {
-		return fmt.Errorf("%w: %s", ErrEmpty, substring)
-	}
-
 	body := t.Sec.BodyLines()
 
-	matchIdx, _, err := FindSingleCheckboxMatch(body, substring)
-	if err != nil {
-		return err
+	// If substring empty, show full list to let user pick.
+	matchesIdx, matches := FindCheckboxMatches(body, substring)
+
+	if len(matchesIdx) == 0 {
+		return ErrNotFound
 	}
 
-	body[matchIdx] = ToggleLineCheckbox(body[matchIdx], done)
+	var chosen int
+	if len(matchesIdx) == 1 {
+		chosen = 0
+	} else {
+		// present interactive selector
+		choices := make([]string, len(matches))
+		for i, cb := range matches {
+			choices[i] = MatchSummary(cb)
+		}
+
+		sel, err := input.PromptForSelection("Choose todo to toggle:", choices)
+		if err != nil {
+			return fmt.Errorf("select todo: %w", err)
+		}
+
+		chosen = sel
+	}
+
+	if chosen < 0 || chosen >= len(matchesIdx) {
+		return fmt.Errorf("%w: invalid selection", ErrNotFound)
+	}
+
+	targetIdx := matchesIdx[chosen]
+	body[targetIdx] = ToggleLineCheckbox(body[targetIdx], done)
 
 	t.Sec.SetBody(strings.Join(body, "\n"))
 

@@ -174,12 +174,33 @@ func (cb *Checkbox) SetChecked(checked bool) {
 
 // FindSingleCheckboxMatch finds exactly one checkbox whose text contains needle (case-insensitive).
 func FindSingleCheckboxMatch(lines []string, needle string) (int, Checkbox, error) {
-	needle = strings.TrimSpace(strings.ToLower(needle))
-	if needle == "" {
+	matchesIdx, matches := FindCheckboxMatches(lines, needle)
+
+	if len(matchesIdx) == 0 {
 		return 0, Checkbox{}, ErrNotFound
 	}
 
-	var matches []int
+	if len(matchesIdx) > 1 {
+		logMultipleMatches(lines, matchesIdx, "checkbox")
+
+		return 0, Checkbox{}, ErrMultipleMatches
+	}
+
+	idx := matchesIdx[0]
+
+	return idx, matches[0], nil
+}
+
+// FindCheckboxMatches returns indices and parsed Checkbox objects for every matching
+// line where the rendered checkbox contains the needle (case-insensitive). If needle
+// is empty this returns all checkbox lines.
+func FindCheckboxMatches(lines []string, needle string) ([]int, []Checkbox) {
+	needle = strings.TrimSpace(strings.ToLower(needle))
+
+	var (
+		matches []int
+		boxes   []Checkbox
+	)
 
 	for index, line := range lines {
 		checkbox, ok := ParseCheckbox(line)
@@ -187,26 +208,49 @@ func FindSingleCheckboxMatch(lines []string, needle string) (int, Checkbox, erro
 			continue
 		}
 
-		// Match against the rendered checkbox line (includes time token if present).
-		if strings.Contains(strings.ToLower(checkbox.String()), needle) {
+		rendered := strings.ToLower(checkbox.String())
+
+		if needle == "" || strings.Contains(rendered, needle) {
 			matches = append(matches, index)
+			boxes = append(boxes, checkbox)
 		}
 	}
 
-	if len(matches) == 0 {
-		return 0, Checkbox{}, ErrNotFound
+	return matches, boxes
+}
+
+// MatchSummary returns a short user-facing summary for the checkbox suitable for
+// presentation in a selection UI: it includes a time token (if any) and truncated text.
+func MatchSummary(checkbox Checkbox) string {
+	const maxLen = 120
+
+	var prefix string
+
+	if checkbox.Start != nil {
+		prefix = checkbox.Start.Format("15:04")
+		if checkbox.End != nil {
+			prefix += "-" + checkbox.End.Format("15:04")
+		}
+
+		prefix += " "
 	}
 
-	if len(matches) > 1 {
-		logMultipleMatches(lines, matches, "checkbox")
-
-		return 0, Checkbox{}, ErrMultipleMatches
+	text := checkbox.Text
+	if len(text) > maxLen {
+		text = text[:maxLen-3] + "..."
 	}
 
-	idx := matches[0]
-	c, _ := ParseCheckbox(lines[idx])
+	box := "[ ]"
+	if checkbox.Checked {
+		box = "[x]"
+	}
 
-	return idx, c, nil
+	indentStr := ""
+	if checkbox.Indent > 0 {
+		indentStr = strings.Repeat("  ", checkbox.Indent)
+	}
+
+	return indentStr + box + " " + prefix + text
 }
 
 // ToggleLineCheckbox toggles the checkbox state on a single line string.
