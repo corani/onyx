@@ -3,7 +3,7 @@ module github.com/corani/onyx
 go 1.25.3
 
 require (
-	github.com/alecthomas/kong v1.13.0
+	github.com/alecthomas/kong v1.14.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/charmbracelet/bubbles v0.21.1
 	github.com/charmbracelet/bubbletea v1.3.10
