@@ -39,7 +39,7 @@ func (m noteInputModel) Init() tea.Cmd {
 func (m noteInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Only one type in switch, so use if statement
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		//nolint:exhaustive
+		//nolint:goconst
 		switch keyMsg.String() {
 		case "ctrl+s":
 			m.done = true
@@ -149,7 +149,6 @@ func (m lineInputModel) Init() tea.Cmd {
 //nolint:ireturn
 func (m lineInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		//nolint:exhaustive
 		switch keyMsg.String() {
 		case "enter":
 			m.done = true
@@ -280,7 +279,6 @@ func (m *selModel) Init() tea.Cmd { return nil }
 //nolint:ireturn
 func (m *selModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		//nolint:exhaustive
 		switch keyMsg.String() {
 		case "enter":
 			m.chosen = m.l.Index()
