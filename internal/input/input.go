@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 )
 
 var (
@@ -32,20 +32,20 @@ type noteInputModel struct {
 }
 
 func (m noteInputModel) Init() tea.Cmd {
-	return textarea.Blink
+	return nil
 }
 
 //nolint:ireturn
 func (m noteInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Only one type in switch, so use if statement
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		//nolint:exhaustive
-		switch keyMsg.Type {
-		case tea.KeyCtrlS:
+		switch keyMsg.String() {
+		case "ctrl+s":
 			m.done = true
 
 			return m, tea.Quit
-		case tea.KeyEsc:
+		case "esc":
 			m.canceled = true
 
 			return m, tea.Quit
@@ -59,8 +59,8 @@ func (m noteInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m noteInputModel) View() string {
-	return m.textarea.View() + "\n(Press Ctrl+S to save, Esc to cancel)"
+func (m noteInputModel) View() tea.View {
+	return tea.NewView(m.textarea.View() + "\n(Press Ctrl+S to save, Esc to cancel)")
 }
 
 func PromptForText(prompt string) (string, error) {
@@ -143,19 +143,19 @@ type lineInputModel struct {
 }
 
 func (m lineInputModel) Init() tea.Cmd {
-	return textinput.Blink
+	return nil
 }
 
 //nolint:ireturn
 func (m lineInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		//nolint:exhaustive
-		switch keyMsg.Type {
-		case tea.KeyEnter:
+		switch keyMsg.String() {
+		case "enter":
 			m.done = true
 
 			return m, tea.Quit
-		case tea.KeyEsc:
+		case "esc":
 			m.canceled = true
 
 			return m, tea.Quit
@@ -169,8 +169,8 @@ func (m lineInputModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m lineInputModel) View() string {
-	return m.input.View() + "\n(Enter to submit, Esc to cancel)"
+func (m lineInputModel) View() tea.View {
+	return tea.NewView(m.input.View() + "\n(Enter to submit, Esc to cancel)")
 }
 
 // PromptForLine shows a single line input using Bubbles textinput.
@@ -181,7 +181,7 @@ func PromptForLine(prompt string) (string, error) {
 	ti.Placeholder = prompt
 	ti.Focus()
 	ti.CharLimit = 0
-	ti.Width = defaultWidth
+	ti.SetWidth(defaultWidth)
 	m := lineInputModel{input: ti, done: false, canceled: false}
 	program := tea.NewProgram(m)
 
@@ -279,14 +279,14 @@ func (m *selModel) Init() tea.Cmd { return nil }
 
 //nolint:ireturn
 func (m *selModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		//nolint:exhaustive
-		switch keyMsg.Type {
-		case tea.KeyEnter:
+		switch keyMsg.String() {
+		case "enter":
 			m.chosen = m.l.Index()
 
 			return m, tea.Quit
-		case tea.KeyEsc:
+		case "esc":
 			m.canceled = true
 
 			return m, tea.Quit
@@ -299,7 +299,7 @@ func (m *selModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *selModel) View() string { return m.l.View() }
+func (m *selModel) View() tea.View { return tea.NewView(m.l.View()) }
 
 // compactDelegate renders each item on a single line with minimal spacing.
 type compactDelegate struct{}
