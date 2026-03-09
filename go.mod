@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	charm.land/bubbles/v2 v2.0.0
-	charm.land/bubbletea/v2 v2.0.1
+	charm.land/bubbletea/v2 v2.0.2
 	github.com/alecthomas/kong v1.14.0
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/charmbracelet/glamour v0.10.0
