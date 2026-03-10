@@ -28,17 +28,10 @@ func Load() (*Config, error) {
 		paths = append(paths, filepath.Join(home, ".config", "onyx", "config"))
 	}
 
-	// Try loading each file in order
-	for i, path := range paths {
-		var err error
-
-		if i == 0 {
-			err = godotenv.Load(path)
-		} else {
-			err = godotenv.Overload(path)
-		}
-
-		if err != nil {
+	// Try loading each file in order. Use Load (no overwrite) so explicit
+	// environment variables take precedence over config files.
+	for _, path := range paths {
+		if err := godotenv.Load(path); err != nil {
 			log.Debug("Could not load env file", "path", path, "err", err)
 		}
 	}
