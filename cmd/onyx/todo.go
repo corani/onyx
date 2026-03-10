@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"charm.land/log/v2"
 	"github.com/corani/onyx/internal/config"
 	"github.com/corani/onyx/internal/input"
 	"github.com/corani/onyx/internal/markdown"

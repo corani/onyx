@@ -1,19 +1,19 @@
 module github.com/corani/onyx
 
-go 1.25.3
+go 1.25.8
 
 require (
 	charm.land/bubbles/v2 v2.0.0
 	charm.land/bubbletea/v2 v2.0.2
+	charm.land/log/v2 v2.0.0
 	github.com/alecthomas/kong v1.14.0
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/charmbracelet/glamour v0.10.0
-	github.com/charmbracelet/log v0.4.2
 	github.com/joho/godotenv v1.5.1
 )
 
 require (
-	charm.land/lipgloss/v2 v2.0.0 // indirect
+	charm.land/lipgloss/v2 v2.0.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -47,7 +47,7 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 )
