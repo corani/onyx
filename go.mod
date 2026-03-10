@@ -8,7 +8,7 @@ require (
 	github.com/alecthomas/kong v1.14.0
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/charmbracelet/glamour v0.10.0
-	github.com/charmbracelet/log v0.4.2
+	github.com/charmbracelet/log/v2 v2.0.0
 	github.com/joho/godotenv v1.5.1
 )
 
