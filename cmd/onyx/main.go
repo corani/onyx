@@ -1,8 +1,8 @@
 package main
 
 import (
+	"charm.land/log/v2"
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/log"
 	"github.com/corani/onyx/internal/config"
 )
 

@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"charm.land/log/v2"
 	"github.com/caarlos0/env/v11"
-	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
 )
 
